@@ -19,31 +19,35 @@ if not os.path.exists(table_path):
 else:
     books = pd.read_excel(table_path, index_col=0, header=0)
 
-
+count = 0
 for url, title, author, edition, isbn, category in tqdm(books[['OpenURL', 'Book Title', 'Author', 'Edition', 'Electronic ISBN', 'English Package Name']].values):
-    new_folder = create_relative_path_if_not_exist(os.path.join(folder, category))
+    if category in ['Mathematics and Statistics', 'Computer Science']:
+        count += 1
+        new_folder = create_relative_path_if_not_exist(os.path.join(folder, category))
 
-    bookname = compose_bookname(title, author, edition, isbn)
-    output_file = os.path.join(new_folder, bookname + '.pdf')
+        bookname = compose_bookname(title, author, edition, isbn)
+        output_file = os.path.join(new_folder, bookname + '.pdf')
 
-    # If book already downloaded, skip it
-    if os.path.exists(output_file):
-        continue
+        print(f'Downloading {output_file}...')
 
-    try:
-        r = requests.get(url)
-        new_url = r.url.replace('%2F','/').replace('/book/','/content/pdf/') + '.pdf'
-        download_book(new_url, output_file)
+        # If book already downloaded, skip it
+        if os.path.exists(output_file):
+            continue
 
-        # Download EPUB version too if exists
-        new_url = r.url.replace('%2F','/').replace('/book/','/download/epub/') + '.epub'
-        output_file = os.path.join(new_folder, bookname + '.epub')
-        request = requests.get(new_url, stream = True)
-        if request.status_code == 200:
+        try:
+            r = requests.get(url)
+            new_url = r.url.replace('%2F','/').replace('/book/','/content/pdf/') + '.pdf'
             download_book(new_url, output_file)
-    except:
-        print('\nProblem downloading: ' + title)
-        time.sleep(30)
-        continue
 
-print('\nFinish downloading.')
+            # Download EPUB version too if exists
+            new_url = r.url.replace('%2F','/').replace('/book/','/download/epub/') + '.epub'
+            output_file = os.path.join(new_folder, bookname + '.epub')
+            request = requests.get(new_url, stream = True)
+            if request.status_code == 200:
+                download_book(new_url, output_file)
+        except:
+            print('\nProblem downloading: ' + title)
+            time.sleep(30)
+            continue
+
+print(f'\nFinished downloading {count} items.')
